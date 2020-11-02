@@ -1,0 +1,271 @@
+---
+title: "Similarity and heterogeneity"
+author: "Filippo Chiarello"
+output:
+  ioslides_presentation:
+    widescreen: true
+    css: style.css
+    incremental: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache = TRUE, message = FALSE, warning = FALSE)
+```
+
+## Overview
+
+Another central concept in social network analysis is that of similarity between vertices. 
+
+> In what ways can two actors in a network be similar, and how can we quantify this similarity? 
+
+Similarity is relevant in at least two important applications: 
+
+* **recommender systems**, where the goal is to suggest to a user new products to buy according to what similar users bought or liked, and 
+* **link prediction**, where the task is to predict new connections for a user on social networks according to the connections of similar users.
+
+## Similarity
+
+Similarity agrees with the following thesis:    
+
+>Two nodes are similar to each other if they share many neighbors.
+
+For instance, two customers are similar if they bought the same products (Amazon), or view the same movies (Netflix), or listen to the same music (Spotify).
+
+## Notation
+
+* let $A = (a_{i,j})$ be the adjacency matrix of a possibly weighted graph
+* the general idea is to associate each node $i$ with a $i$th row (or column) of the adjacency matrix (a vector of size the number of nodes of the graph)
+* the similarity (or dissimilarity) of two nodes $i$ and $j$ is then measured using a similarity (or distance) function among the associated vectors
+
+## Notation
+
+Let us focus on unweighted undirected graphs with $n$ nodes. 
+
+We denote with $$k_i = \sum_k A_{i,k}$$ the degree of node $i$ and with $$n_{i,j} = \sum_k A_{i,k} A_{j,k}$$ the number of neighbors that nodes $i$ and $j$ have in common. 
+
+Moreover, $A_i$ is the $i$-th row of $A$, a boolean (0-1) vector of length $n$. 
+
+## Cosine similarity
+
+> The cosine similarity $\sigma_{i,j}$ of nodes $i$ and $j$ is the cosine of the angle between vectors $A_i$ and $A_j$.
+
+$$
+\sigma_{i,j} = \cos (A_i, A_j) = \frac{A_i \cdot A_j}{\|A_i\| \|A_j\|} = \frac{\sum_k A_{i,k} A_{j,k}}{\sqrt{\sum_k A_{i,k}^{2}} \sqrt{\sum_k A_{j,k}^{2}}}
+$$  
+
+The measure runs from 0 (orthogonal vectors or maximum dissimilarity) to 1 (parallel vectors or maximum similarity). 
+
+Since the involved vectors are 0-1 vectors, we have that:
+
+$$
+\sigma_{i,j} = \frac{n_{i,j}}{\sqrt{k_i k_j}}
+$$  
+ 
+That is, cosine similarity between $i$ and $j$ is the number of neighbors shared by $i$ and $j$ divided by the geometric mean of their degrees.
+
+## Pearson similarity
+
+An alternative similarity measure is **Pearson correlation coefficient**: 
+
+> The similarity $\sigma_{i,j}$ of nodes $i$ and $j$ is the correlation coefficient between vectors $A_i$ and $A_j$
+
+$$
+\sigma_{i,j} = \frac{cov(A_i, A_j)}{sd(A_i) \, sd(A_j)} = \frac{\sum_k (A_{i,k} - \langle A_i \rangle) (A_{j,k} - \langle A_j \rangle)}
+{\sqrt{\sum_k (A_{i,k} - \langle A_i \rangle)^{2}} \sqrt{\sum_k (A_{j,k} - \langle A_j \rangle)^{2}}}
+$$  
+
+The measure runs from -1 (maximum negative correlation or maximum dissimilarity) to 1 (maximum positive correlation or maximum similarity). Notice that values close to $0$ indicate no correlation, hence neither similarity nor dissimilarity.
+
+Again, since the involved vectors are 0-1 vectors, it is not difficult to see that the numerator of the correlation coefficient, that is the co-variance between vectors $A_i$ and $A_j$ is: 
+
+$$
+cov(A_i, A_j) = n_{i,j} - \frac{k_i k_j}{n}
+$$  
+
+Notice that $k_i k_j/n$ is the expected number of common neighbors between $i$ and $j$ if they would choose their neighbors at random: the probability that a random neighbor of $i$ is also a neighbor of $j$ is $k_j / n$, hence the expected number of common neighbors between $i$ and $j$ is $k_i k_j/n$.
+
+
+Hence a positive covariance, or a similarity between $i$ and $j$, holds when  $i$ and $j$ share more neighbors than we would expect by change, while a negative covariance, or a dissimilarity between $i$ and $j$ happens when $i$ and $j$ have less neighbors in common than we would expect by change. 
+
+
+## Heterogeneity
+
+We have learnt how to exploit the network topology to gauge the similarity (or dissimilarity) of pairs of networks. 
+
+This opens up the possibility of defining a measure of **heterogeneity** for a node in terms of the dissimilarity of its neighbors:
+
+>A node is heterogeneous if it has dissimilar neighbors.
+
+Examples are: **Shannon entropy**, **Simpson diversity** or **Rao quadratic entropy**
+
+For instance:
+
+* an individual is heterogeneous if her friends are ill-matched
+* a scholar is heterogeneous if his papers are interdiscipliary
+
+
+# Case Study: Bigrams as graphs
+
+## Bigrams as graphs
+
+We may be interested in visualizing all of the relationships among words in a corpus.
+
+As one common visualization, we can arrange the words into a **network**
+
+```{r}
+library(igraph)
+library(tidygraph)
+library(ggraph)
+library(tidyverse)
+library(tidytext)
+library(janeaustenr)
+
+
+austen_bigrams <- austen_books() %>%
+  unnest_tokens(bigram, text, token = "ngrams", n = 2)
+
+austen_bigrams %>% 
+  glimpse()
+```
+
+## Text preprocessing
+
+```{r}
+
+# remove stop words
+bigrams_separated <- austen_bigrams %>%
+  separate(bigram, c("word1", "word2"), sep = " ")
+
+bigrams_filtered <- bigrams_separated %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word)
+
+# bigram counts
+bigram_counts <- bigrams_filtered %>% 
+  count(word1, word2, sort = TRUE)
+```
+
+## Create the graph
+
+```{r}
+# create the graph
+bigram_graph <- bigram_counts %>%
+  filter(n > 20) %>% 
+  as_tbl_graph()
+
+bigram_graph
+
+```
+
+## Visualise the graph
+
+```{r}
+
+# arrows
+a <- grid::arrow(type = "closed", length = unit(.1, "inches"))
+
+# plot the graph
+ggraph(bigram_graph, layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n), show.legend = FALSE,
+                 arrow = a, end_cap = circle(.07, 'inches')) +
+  geom_node_point(color = "lightblue", size = 1) +
+  geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
+  theme_void()
+
+```
+
+
+>* note that this is a visualization of a **Markov chain**, a common model in text processing
+>* In a Markov chain, each choice of word depends only on the previous word
+>* in this case, a random generator following this model might spit out "dear", then "sir", then "william/walter/thomas/thomas's", by following each word to the most common words that follow it
+
+## Co-occurrence of words
+
+* tokenizing by n-gram is a useful way to explore pairs of adjacent words
+* however, we may also be interested in words that tend to co-occur within particular documents or particular chapters, **even if they don't occur next to each other**
+* the [widyr](https://CRAN.R-project.org/package=widyr ) package makes operations such as computing counts and correlations easy, by simplifying the pattern of *widen data, perform an operation, then re-tidy data* 
+* the widyr package: 
+    1. first *casts* a tidy dataset into a wide matrix
+    2. performs an operation such as a correlation on it
+    3. then re-tidies the result
+
+
+
+## Co-occurrence of words: the wider package
+
+```{r}
+library(widyr)
+
+# separate words in sections (10 lines)
+austen_section_words <- austen_books() %>%
+  filter(book == "Pride & Prejudice") %>%
+  mutate(section = row_number() %/% 10) %>%
+  filter(section > 0) %>%
+  unnest_tokens(word, text) %>%
+  filter(!(word %in% stop_words$word))
+
+austen_section_words
+
+# count words co-occuring within sections
+word_pairs <- austen_section_words %>%
+  pairwise_count(word, section, sort = TRUE)
+
+word_pairs
+
+```
+
+## Co-occurrence of words: correlation coefficient
+
+Pairs like "Elizabeth" and "Darcy" are the most common co-occurring words, but that's not particularly meaningful since *they're also the most common individual words*. 
+
+We may instead want to examine **correlation** among words, which indicates how often they appear together relative to how often they appear separately.
+
+In particular, here we'll focus on the [phi coefficient](https://en.wikipedia.org/wiki/Phi_coefficient), a common measure for binary correlation. 
+
+The focus of the phi coefficient is how much more likely it is that either **both** word X and Y appear, or **neither** do, than that one appears without the other.
+
+Consider the following table:
+
+|  | Has word Y | No word Y | Total |  
+|------------|---------------|---------------|--------------|
+| Has word X | $n_{11}$ | $n_{10}$ | $n_{1\cdot}$ |  
+| No word X | $n_{01}$ | $n_{00}$ | $n_{0\cdot}$ |  
+| Total | $n_{\cdot 1}$ | $n_{\cdot 0}$ | n |  
+
+In terms of this table, the phi coefficient is:
+
+$$\phi=\frac{n_{11}n_{00}-n_{10}n_{01}}{\sqrt{n_{1\cdot}n_{0\cdot}n_{\cdot0}n_{\cdot1}}}$$
+
+Introduced by Karl Pearson, this measure is similar to the [Pearson correlation coefficient](https://en.wikipedia.org/wiki/Pearson_correlation_coefficient) in its interpretation.
+
+```{r }
+# we need to filter for at least relatively common words first
+word_cors <- austen_section_words %>%
+  group_by(word) %>%
+  filter(n() >= 20) %>%
+  pairwise_cor(word, section, sort = TRUE)
+
+word_cors
+
+word_cors %>%
+  filter(item1 == "pounds")
+```
+
+Just as we used ggraph to visualize bigrams, we can use it to visualize the correlations and clusters of words that were found by the widyr package.
+
+```{r}
+word_cors %>%
+  filter(correlation > .15) %>%
+  as_tbl_graph() %>%
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(edge_alpha = correlation), show.legend = FALSE) +
+  geom_node_point(color = "lightblue", size = 1) +
+  geom_node_text(aes(label = name), repel = TRUE) +
+  theme_void()
+```
+
+# Thanks for your attetion!
+
+Filippo Chiarello

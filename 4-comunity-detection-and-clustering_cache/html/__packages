@@ -1,0 +1,15 @@
+base
+igraph
+tidygraph
+ggplot2
+ggraph
+readr
+tidyverse
+tibble
+tidyr
+purrr
+dplyr
+stringr
+forcats
+influenceR
+seriation

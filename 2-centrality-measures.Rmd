@@ -1,0 +1,307 @@
+---
+title: "Centrality Measures"
+author: "Filippo Chiarello"
+output:
+  ioslides_presentation:
+    widescreen: true
+    css: style.css
+    incremental: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache = TRUE, message = FALSE, warning = FALSE)
+```
+
+## Overview
+
+A large volume of research on networks has been devoted to the concept of centrality. This research addresses the question: 
+
+> Which are the most important nodes or edges in a network? 
+
+## Overview
+
+* what are the important **Web pages** about a certain topic to be delivered by a search engine?
+* which are the popular **actors** in a social networks?
+* what are the influential **academic papers** in a displipline?
+* what are the leaser **companies** in a sector?
+* which are the vital **human resources** in a company?
+* which are the indispensable **supplier** in a logistic network?
+
+## Degree centrality
+
+* **degree** is a simple centrality measure that counts how many neighbors a node has 
+* if the network is directed, we have two versions of the measure: 
+  * **in-degree** is the number of in-coming links; 
+  * **out-degree** is the number of out-going links.
+
+## Degree centrality
+
+The thesis of degree centrality reads as follows:   
+
+> *A node is important if it has many neighbors, or, in the directed case, if there are many other nodes that link to it.*
+
+## Closeness centrality
+
+**Closeness centrality** measures the mean distance from a vertex to other vertices. 
+
+Given nodes $i$ and $j$, the distance $d_{i,j}$ between them is the length of a **shortest path** from $i$ to $j$. 
+
+The mean distance for vertex $i$ to others is:
+
+$$l_i = \frac{1}{n-1} \sum_{j\neq i} d_{i,j}$$
+and the closeness centrality for $i$ is:
+
+$$C_i = \frac{1}{l_i} = \frac{n-1}{\sum_{j\neq i} d_{i,j}}$$
+
+## Betweenness centrality
+
+* **betweenness centrality** measures the extent to which a vertex lies on paths between other  vertices 
+* vertices with high betweenness may have considerable influence within a network by virtue of their control over information passing between others
+* they are also the ones whose removal from the network will most disrupt communications between other vertices because they lie on the largest number of paths taken by messages
+
+## Betweenness centrality
+
+Let $n_{s,t}^{i}$ be the number of **shortest paths** from $s$ to $t$ that pass through $i$ and let $n_{s,t}$ be the total number of geodesic paths from $s$ to $t$. 
+
+Then the betweenness centrality of vertex $i$ is:
+
+$$b_i = \sum_{\begin{array}{l} s\neq t \\ s \neq i \\ t \neq i\end{array}} w_{s,t}^{i} = \sum_{\begin{array}{l} s\neq t \\ s \neq i \\ t \neq i\end{array}} \frac{n_{s,t}^{i}}{n_{s,t}}$$
+
+where the formula counts undirected paths in only one direction and, by convention, the ratio $w_{s,t}^{i} = 0$ if $n_{s,t} = 0$. 
+
+Notice that each pair of vertex $s, t$ contribute to the sum for $i$ with a weight $w_{s,t}^{i}$ between 0 and 1 expressing the betweenness of $i$ with respect to the pair $s, t$. 
+
+## Dig deeper
+
+Typically, shortest paths are considered in the definition of both closeness and betweenness. There are two drawbacks of this approach:
+
+>1. all paths (even slightly) longer than the shortest ones are not considered at all
+>2. the actual number of shortest paths that lie among the two vertices is irrelevant
+
+In many applications, however, it is reasonable to consider the abundance and the length of all paths of the network, since communication on the network is enhanced as soon as more routes are possible, in particular if these pathways are short. 
+
+Current flow centrality addresses these issues, you can read more in this article: [Resistance distance, closeness, and betweenness](../biblio/currentflow.pdf). 
+
+## Eigenvector centrality
+
+* a natural extension of degree centrality is **eigenvector centrality** 
+* in-degree centrality awards one centrality point for every link a node receives 
+* but not all vertices are equivalent: some are more relevant than others, and, reasonably, endorsements from important nodes count more
+
+## Eigenvector centrality
+
+The eigenvector centrality thesis reads: 
+
+> A node is important if it is linked to by other important nodes
+
+## Katz centrality
+
+* a practical problem with eigenvector centrality is that it works well only if the graph is (strongly) connected
+* real undirected networks typically have a large connected component, of size proportional to the network size. However, real directed networks do not. 
+* if a directed network is not strongly connected, then only vertices that are in strongly connected components of at least two nodes or in the out-component of such components can have non-zero eigenvector centrality
+* for instance, in a directed acyclic graph, all nodes get null eigenvector centrality
+
+## Katz centrality
+
+* a way to work around this problem is to give each node a small amount of centrality for free, regardless of the position of the vertex in the network, that it can transfer to other nodes 
+* it follows that highly linked nodes have high centrality, regardless of the centrality of the linkers 
+* however, nodes that receive few links may still have high centrality if the linkers have large centrality
+
+## Katz centrality
+
+The Katz centrality thesis is then:
+
+> A node is important if it is linked from other important nodes or if it is highly linked.
+
+This method has been proposed by **Leo Katz** (A new status index derived from sociometric analysis. Psychometrika, 1953) and later refined by **Charles H. Hubbell** (An input-output approach to clique identification. Sociometry, 1965). 
+
+
+## PageRank
+
+* a potential problem with Katz centrality is the following: if a node with high centrality links many others then all those others get high centrality 
+* in many cases, however, it means less if a node is only one among many to be linked
+* the centrality gained by virtue of receiving a link from an important node should be diluted if the important vertex is very magnanimous with endorsements
+* PageRank is an adjustment of Katz centrality that takes into consideration this issue 
+* it was proposed (and patented) by Sergey Brin and Larry Page (The anatomy of a large-scale hypertextual web search engine. Computer networks and ISDN systems, 1998).
+
+
+## PageRank
+
+There are three distinct factors that determine the PageRank of a node: 
+
+1. the number of links it receives 
+1. the centrality of the linkers
+1. the link propensity of the linkers
+
+## PageRank
+
+The PageRank thesis might be summarized as follows:
+
+> A node is important if it linked from other important and link parsimonious nodes or if it is highly linked.</em> 
+
+
+
+## Dig deeper
+
+PageRank centrality, regarded as a ranking measure, is a remarkably old method. Early pioneers of this technique are:
+
+>* Wassily W. Leontief (The Structure of American Economy, 1919-1929. Harvard University Press, 1941)  
+>* John R. Seeley (The net of reciprocal influence: A problem in treating sociometric data. The Canadian Journal of Psychology, 1949). 
+
+## Authorities and hubs
+
+Thus, there are now two types of central nodes: 
+
+* **authorities**, that contain reliable information on the topic of interest
+* **hubs**, that tell us where to find authoritative information. 
+* a node may be both an authority and a hub: for instance, a review paper may be highly cited because it contains useful content and it may as well cite other useful sources
+* or an important art collector may be also a successful artist
+
+## HITS
+
+The hyperlink-Induced Topic Search (HITS; also known as hubs and authorities or Kleinberg centrality) thesis reads:  
+
+>A node is an authority if it is linked to by hubs; it is a hub if it links to authorities.
+
+This method has been conceived by Jon M. Kleinberg (Authoritative sources in a hyperlinked environment. In ACM-SIAM Symposium on Discrete Algorithms, 1998). 
+
+## HINT
+
+Type __?centrality__ for an overview about all possible centrality measures you can use.
+
+## Dig deeper - Signed networks
+
+* in our discussion of networks thus far, we have generally viewed the relationships contained in these networks as having positive connotations
+* the terminology of on-line social networks reflects a largely similar view, through its emphasis on the connections one forms with friends, fans, followers, and so forth
+* but in most network settings, there are also negative effects at work. Some relations are friendly, but others are antagonistic or hostile
+* how should we reason about the mix of **positive and negative relationships** that take place within a network?
+
+
+
+# Case Study: HITS in the art market
+
+## Crypto Art
+
+Rare digital art, also known as **crypto art**, is limited-edition collectible art cryptographically registered with a token on a blockchain. Tokens represent transparent, auditable origin and provenance for a piece of digital art. Blockchain technology allows tokens to be held and securely traded from one collector to another.
+
+Digital galleries like [SuperRare](https://superrare.co/) exhibit rare digital artworks, such as static and animated images. When a digital asset made by an artist is added to a digital gallery, a token is generated by a smart contract and deposited in the artistâ€™s wallet. The token is permanently linked to the artwork, and is a unique, one-of-a-kind asset that represents ownership and authenticity of the underlying artwork.
+
+---
+
+Once created, the artwork starts its life on the given blockchain, where a fan or collector can purchase it, and where it can be subsequently exchanged, traded or held by collectors like any other rare artifact. Typically, artworks can be sold using auctions: bidders make offers, and the creator has the ability to accept the bids. When an asset is sold, it is directly transferred to the buyerâ€™s wallet, while the corresponding price in crypto currency is moved to the sellerâ€™s wallet. Thanks to the blockchain, each transaction is cryptographically secured and peer-to-peer, meaning neither the funds nor the asset are ever held by the gallery or any other third party.
+
+---
+
+The typical events on the SuperRare gallery the the following:
+
+1. an artists creates an artwork and becomes the owner of the corresponding token;
+1. the creator sets a price for an artwork;
+1. a collector bids a given amount for an artwork;
+1. an artworkâ€™s owner accepts a bid, hence the artwork is transferred from the current owner to the bidder, who becomes the new owner, and the bid price transfers the other way around, from the bidderâ€™s account to the ownerâ€™s account;
+1. an artwork sales directly (without auction), only if the owner set a price for the artwork.
+
+## Data
+
+* a [CSV](data/nodes.csv) with nodes 
+* a [CSV](data/edges.csv) with edges of the priced (weighted) sale network.
+
+Links are from buyer to seller and are weighted with the sale price (in Ether). 
+
+## Challenges
+
+1. Build and visualize the weighted sale network
+2. Compute centrality measures on the sale network
+3. Check the correlation among the measures
+4. Who are the brokers (art traders) of the sale network?
+
+## Build and visualize the sale network
+
+```{r}
+library(tidyverse)
+library(ggraph)
+library(tidygraph)
+
+nodes = read_csv("data/nodes.csv")
+edges = read_csv("data/edges.csv")
+
+# build sale network
+saleNet = tbl_graph(nodes = nodes, edges, directed = TRUE)
+
+# visualize (undirected) network
+layout_fr = create_layout(saleNet, layout = "fr")
+layout_sy = create_layout(saleNet, layout = "sugiyama")
+
+ggraph(layout_fr) +
+  geom_edge_fan(alpha = 0.1, show.legend = FALSE) +
+  theme_graph()
+
+ggraph(layout_sy) +
+  geom_edge_fan(alpha = 0.1, show.legend = FALSE) +
+  theme_graph()
+
+
+
+```
+
+## Compute centrality measures
+
+```{r}
+library(corrplot)
+
+# compute all other ratings and add them to the nodes of the graph
+saleNet = saleNet %>% 
+  activate(nodes) %>%
+                    # HITS authority
+  mutate(authority = centrality_authority(weights = amount), 
+                    # overall amount of sold items
+         sellAmount = centrality_degree(weights = amount, mode = "in"), 
+                    # number of sold items
+         sellItems = centrality_degree(mode = "in"), 
+                    # HITS hub
+         hub = centrality_hub(weights = amount), 
+                    # overall amount of bought items
+         buyAmount = centrality_degree(weights = amount, mode = "out"), 
+                    # number of bought items
+         buyItems = centrality_degree(mode = "out") 
+  )
+
+
+```
+
+
+## Check the correlation among the measures
+
+```{r}
+df =
+  as.list(saleNet)$nodes %>% 
+  select(authority, sellAmount, sellItems, 
+         hub, buyAmount, buyItems, 
+         -id, -username, -address)
+
+M = cor(df, method = "kendall")
+knitr::kable(round(M, 2))
+corrplot(M, order = "hclust")
+```
+
+## Who are the brokers (art traders) of the sale network?
+
+```{r}
+saleNet = saleNet %>% 
+  activate(nodes) %>%
+  mutate(betweenness = centrality_betweenness())
+
+brokers = 
+  as.list(saleNet)$nodes %>% 
+  arrange(desc(betweenness)) %>% 
+  select(username, betweenness, sellItems, buyItems) %>% 
+  mutate(items = sellItems + buyItems)
+
+knitr::kable(head(brokers, 10), digits = 0)
+
+```
+
+# Thanks for your attetion!
+
+Filippo Chiarello

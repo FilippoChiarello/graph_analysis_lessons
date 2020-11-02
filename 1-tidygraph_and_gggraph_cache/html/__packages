@@ -1,0 +1,14 @@
+base
+igraph
+dplyr
+ggplot2
+ggraph
+tidygraph
+readr
+tidyverse
+tibble
+tidyr
+purrr
+stringr
+forcats
+corrplot

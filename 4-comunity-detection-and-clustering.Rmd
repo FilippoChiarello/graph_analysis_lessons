@@ -1,0 +1,417 @@
+---
+title: "Community Detection and Clustering"
+author: "Filippo Chiarello"
+output:
+  ioslides_presentation:
+    widescreen: true
+    css: style.css
+    incremental: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache = TRUE, message = FALSE, warning = FALSE)
+```
+
+## Overview
+
+> Loosely stated, community detection is the problem of finding the natural divisions of a network into groups of vertices, called communities, such that there are many edges within groups and few edges between groups. 
+
+For instance: 
+
+* in social networks, communities represent groups of individuals that are socially tight
+* in a citation network among academic journals, communities might correspond to topics or disciplines
+* communities of nodes in a web graph might indicate groups of related web pages
+* communities of nodes in a metabolic network might indicate functional units within the network
+
+## Modularity
+
+* our goal is to find a measure that quantifies how many edges lie **within** groups in our network relative to the number of such edges expected on the basis of chance
+* a good division of nodes into communities is one that maximizes such a measure
+* equivalently, we want a measure that quantifies how many edges lie **between** groups in our network relative to the expected number of such links 
+* a good division of nodes into communities is one that minimizes such a measure 
+* we will concentrate on the former measure of **modularity** of a network
+
+## Modularity
+
+Let us focus on undirected multi-graphs, that is, graphs that allow self-edges (edges involving the same node) and multi-edges (more than one simple edge between two vertices). 
+
+>A measure of modularity of a network is the number of edges that run between vertices of the same community minus the number of such edges we would expect to find if edges were positioned at random while preserving the vertex degrees (**configuration model**).  
+
+Let us  denote by $c_i$ the community of vertex $i$ and $\delta(c_i,c_j) = 1$ if $c_i = c_j$ and $\delta(c_i,c_j) = 0$ otherwise. 
+
+Hence, the **actual** number of edges that run between vertices of the same group is:
+
+
+$$\sum_{(i,j) \in E} \delta(c_i, c_j) = \frac{1}{2} \sum_{i,j} A_{i,j} \delta(c_i, c_j)$$
+
+
+where $E$ is the set of edges of the graph and $A_{i,j}$ is the <em>actual number</em> of edges between $i$ and $j$, which is zero or more (notice that each undirected edge is represented by two pairs in the second sum, hence the factor one-half).
+
+## Modularity
+
+The **expected number** of edges that run between vertices of the same group is:
+
+$$\frac{1}{2} \sum_{i,j} \frac{k_i k_j}{2m} \delta(c_i, c_j)$$
+
+
+where $k_i$ and $k_j$ are the (weighted) degrees of $i$ and $j$, while $m$ is the number of edges of the graph. 
+
+Notice that $k_i k_j / 2m$ is the expected number of edges between vertices $i$ and $j$ in the configuration model assumption.
+
+Indeed, consider a particular edge attached to vertex $i$: 
+
+* the probability that this edge goes to node $j$ is $k_j / 2m$, since the number of edges attached to $j$ is $k_j$ and the total number  of edge ends in the network is $2m$ (the sum of all node degrees) 
+* since node $i$ has $k_i$ edges attached to it, the expected number of edges between $i$ and $j$ is $k_i k_j / 2m$
+
+## Modularity
+
+The difference between the actual and expected number of edges connecting nodes of the same group, expressed as a fraction with respect to the total number of edges $m$, is called **modularity**, and given by:
+
+
+$$Q = \frac{1}{2m} \sum_{i,j} \left(A_{i,j} - \frac{k_i k_j}{2m}\right) \delta(c_i, c_j)  = \frac{1}{2m} \sum_{i,j} B_{i,j} \delta(c_i, c_j)$$
+
+
+where:
+
+$$
+B_{i,j} = A_{i,j} - \frac{k_i k_j}{2m}
+$$
+
+and $B$ is called the **modularity matrix**.
+
+The modularity $Q$ takes positive values if there are more edges between same-group vertices than expected, and negative values if there are less. 
+
+## Modularity
+
+Our goal is to find the partition of network nodes into communities such that the modularity of the division is maximum. 
+
+Unfortunately, this is a **computationally hard problem**. 
+
+Indeed, the number of ways a network of $n$ nodes can be divided into two groups of $n_1$ and $n_2$ nodes, with $n_1 + n_2 = n$ is:
+
+$$
+\binom{n}{n_1} = \binom{n}{n_2} = \frac{n!}{n_1! \, n_2!} \sim \frac{2^{n+1}}{\sqrt{n}}
+$$
+
+when $n_1 = n_2 = n/2$, which is exponential in $n$. 
+
+Instead, therefore, we turn to **heuristic algorithms**, algorithms that attempt to maximize the modularity in an intelligent way that  gives reasonably good results in a quick time. 
+
+## Greedy optimization of modularity
+
+* `cluster_fast_greedy` starts out with each vertex in our network in a one-vertex group of its own
+* then it successively amalgamate groups in pairs, choosing at each step the pair whose amalgamation gives the biggest increase in modularity, or the smallest decrease if no choice gives an increase 
+* eventually all vertices are amalgamated into a single large community and the algorithm ends 
+* then we go back over the states through which the network passed during the course of the algorithm and select the one with the highest value of the modularity
+
+## Edge betweenness
+
+* `cluster_edge_betweenness` looks for the edges that lie between communities
+* if we can find and remove these edges, we will be left with just the isolated communities
+* to identify edges between communities one common approach is to use edge betweenness centrality, which counts the number of geodesic paths that run along edges
+* a less expensive alternative would be to look for edges that belong to an unusually small number of short loops
+
+## Random walks
+
+* `cluster_walktrap` is an approach based on random walks
+* the general idea is that if you perform random walks on the graph, then the walks are more likely to stay within the same community because there are only a few edges that lead outside a given community
+* this method runs short random walks of 3-4-5 steps (depending on one of its parameters) and uses the results of these random walks to merge separate communities in a bottom-up manner
+* tou can use the modularity score to select where to cut the dendrogram
+
+## Statistical meachanics
+
+* `cluster_spinglass` is an approach from statistical physics, based on the so-called Potts model
+* in this model, each particle (i.e. vertex) can be in one of k spin states
+* the interactions between the particles (i.e. the edges of the graph) specify which pairs of vertices would prefer to stay in the same spin state and which ones prefer to have different spin states
+* the model is then simulated for a given number of steps, and the spin states of the particles in the end define the communities
+
+## Label propagation
+
+* `cluster_label_prop` is a simple approach in which every node is assigned one of k labels. 
+* the method then proceeds iteratively and re-assigns labels to nodes in a way that each node takes the most frequent label of its neighbors in a synchronous manner
+* the method stops when the label of each node is one of the most frequent labels in its neighborhood
+
+## Infomap community finding
+
+* `cluster_infomap` is based on information theoretic principles 
+* it tries to build a grouping which provides the shortest description length for a random walk on the graph, where the description length is measured by the expected number of bits per vertex required to encode the path of a random walk 
+* when we describe a network as a set of interconnected communities, we are highlighting certain regularities of the network's structure while filtering out the relatively unimportant details
+* a modular description of a network can be viewed as a lossy compression of that network's topology
+
+## Multi-level optimization of modularity
+
+* `cluster_louvain` is based on the modularity measure and a hierarchical approach 
+* initially, each vertex is assigned to a community on its own
+* in every step, vertices are re-assigned to communities in a local, greedy way: each vertex is moved to the community with which it achieves the highest contribution to modularity
+* when no vertices can be reassigned, each community is considered a vertex on its own, and the process starts again with the merged communities
+* the process stops when there is only a single vertex left or when the modularity cannot be increased any more in a step
+
+## Optimal community structure 
+
+* `cluster_optimal` calculates the optimal community structure for a graph, in terms of maximal modularity score
+* the calculation is done by transforming the modularity maximization into an integer programming problem, and then calling the [GLPK](https://www.gnu.org/software/glpk/) library to solve that
+
+## Tidy clustering
+
+Tidygraph uses clustering algorithms with mutate in order to compute communities among graphs and add this information to the node table. 
+
+>Let's use some clustering approaches and measure the modularities. 
+
+
+```{r}
+library(igraph)
+library(tidygraph)
+g <-  make_graph("Zachary") %>% 
+  tidygraph::as_tbl_graph()
+  
+g %>% 
+  activate(nodes) %>% 
+  mutate(leading_eigen = group_leading_eigen(), 
+         mod1 = graph_modularity(leading_eigen)) %>% 
+  mutate(fast_greedy = group_fast_greedy(), 
+         mod2 = graph_modularity(fast_greedy)) %>% 
+  mutate(edge_betweenness = group_edge_betweenness(), 
+         mod3 = graph_modularity(edge_betweenness)) 
+
+```
+
+## HINT
+
+Type ?group_graph for an overview about all possible ways to cluster and group nodes.
+
+# Case Study: Game of Thrones network analysis
+
+```{r, echo=FALSE}
+library(readr)     # fast reading of csv files
+library(tidyverse) # tidy data analysis
+library(tidygraph) # tidy graph analysis
+library(ggraph)    # for plotting
+
+```
+
+## The Data
+
+Data can be obtained by cloning this [Github repository](https://github.com/mathbeveridge/asoiaf) from Andrew Beveridge. This is the data for the work presented [here](https://networkofthrones.wordpress.com).
+
+- Character Interaction Networks for George R. R. Martin’s “A Song of Ice and Fire” saga.
+- These networks were created by connecting two characters whenever their names (or nicknames) appeared within 15 words of one another in one of the books in “A Song of Ice and Fire.” 
+- The edge weight corresponds to the number of interactions._
+
+## Import the data
+
+
+```{r}
+
+path <- "data/asoiaf/data/"
+files <- list.files(path = path, full.names = TRUE)
+files
+
+```
+
+## Characters across all books
+
+The first data we use is the character interactions in all five books. We are not using the node files here, because edge names are sufficient. Node files infomation can be used to have nicer labeles.
+
+```{r}
+
+cooc_all_edges <- read_csv(files[1])
+glimpse(cooc_all_edges)
+
+```
+
+## Data subsetting
+
+Because there are so many characters in the books, many of them minor, let's subset the data to the 100 characters with the most interactions across all books. 
+
+```{r}
+
+main_ch <- cooc_all_edges %>%
+  select(-Type) %>%
+  gather(x, name, Source:Target) %>%
+  group_by(name) %>%
+  summarise(sum_weight = sum(weight)) %>%
+  ungroup()
+
+main_ch_l <- main_ch %>%
+  arrange(desc(sum_weight)) %>%
+  top_n(100, sum_weight)
+
+main_ch_l
+
+cooc_all_f <- cooc_all_edges %>%
+  filter(Source %in% main_ch_l$name & Target %in% main_ch_l$name)
+
+```
+
+## Create the tidygraph
+
+```{r}
+
+cooc_all_f_graph <- as_tbl_graph(cooc_all_f, directed = FALSE) %>%
+  activate(edges) %>%
+  filter(!edge_is_multiple()) #filter multiple edges
+
+```
+
+## Centrality Measures
+
+Type ?centrality for an overview about all possible centrality measures you can use. Let’s try out centrality_degree().
+
+
+```{r}
+
+cooc_all_f_graph %>%
+  activate(nodes) %>% 
+  mutate(neighbors = centrality_degree()) %>%
+  arrange(-neighbors)
+
+```
+
+## Grouping and clustering
+
+
+Type ?group_graph for an overview about all possible ways to cluster and group nodes. Here I am using group_infomap(). Group nodes by minimizing description length using.
+
+```{r}
+
+as_tbl_graph(cooc_all_f, directed = FALSE) %>%
+  activate(nodes) %>% 
+  mutate(group = group_infomap()) %>%
+  arrange(-group)
+
+
+```
+
+## Querying node types
+
+- We can also query different node types (?node_types gives us a list of options):
+
+- These functions all lets the user query whether each node is of a certain type. All of the functions returns a logical vector indicating whether the node is of the type in question. 
+
+- Let's try out node_is_center() (does the node have the minimal eccentricity in the graph) and node_is_keyplayer() to identify the top 10 key-players in the network. 
+
+- The “Key Player” family of node importance algorithms (Borgatti 2006) involves the selection of a metric of node importance and a combinatorial optimization strategy to choose the set S of vertices of size k that maximize that metric. 
+
+- You can read more about the node_is_keyplayer() function in the (manual for the influenceR package) [https://cran.r-project.org/web/packages/influenceR/].
+
+## Querying node types
+
+```{r, echo=FALSE}
+library(influenceR)
+```
+
+
+```{r}
+
+as_tbl_graph(cooc_all_f, directed = FALSE) %>%
+  activate(nodes) %>% 
+  mutate(center = node_is_center(),
+         keyplayer = node_is_keyplayer(k = 10)) %>% 
+  as_tibble() %>% 
+  DT::datatable()
+
+```
+
+## Node pairs
+
+- Some statistics are a measure between two nodes, such as distance or similarity between nodes. 
+
+- In a tidy context one of the ends must always be the node defined by the row, while the other can be any other node. 
+
+- All of the node pair functions are prefixed with node_* and ends with _from/_to if the measure is not symmetric and _with if it is (e.g. there’s both a node_max_flow_to() and node_max_flow_from() function while only a single node_cocitation_with() function.)
+
+- See more (here)[https://www.data-imaginist.com/2017/introducing-tidygraph/]
+
+## Node pairs
+
+```{r}
+as_tbl_graph(cooc_all_f, directed = FALSE) %>%
+  activate(nodes) %>% 
+  mutate(dist_to_center = node_distance_to(node_is_center()))
+```
+
+## Edge betweenness
+
+Similarly to node metrics, we can calculate all kinds of edge metrics. 
+
+- Betweenness, for example, describes the shortest paths between nodes. 
+
+- More about what you can do with edges can be found with ?edge_types and in the tidygraph manual.
+
+## Edge betweenness
+
+```{r}
+
+as_tbl_graph(cooc_all_f, directed = FALSE) %>%
+  activate(edges) %>% 
+  mutate(centrality_e = centrality_edge_betweenness())
+
+
+```
+
+## Analyze the network
+
+```{r, echo= FALSE}
+library(seriation)
+```
+
+
+```{r}
+
+cooc_all_f_graph <- as_tbl_graph(cooc_all_f, directed = FALSE) %>%
+  mutate(n_rank_trv = node_rank_traveller(),
+         neighbors = centrality_degree(),
+         group = group_infomap(),
+         center = node_is_center(),
+         dist_to_center = node_distance_to(node_is_center()),
+         keyplayer = node_is_keyplayer(k = 10)) %>%
+  activate(edges) %>% 
+  filter(!edge_is_multiple()) %>%
+  mutate(centrality_e = centrality_edge_betweenness())
+
+cooc_all_f_graph
+
+```
+
+## Explore the graph
+
+There are lots of options for layouts visualisation of graph. Let's try a Fruchterman-Reingold algorithm.
+
+```{r}
+
+layout <- create_layout(cooc_all_f_graph, 
+                        layout = "fr")
+
+output_graphg <- ggraph(layout) + 
+    geom_edge_density(aes(fill = weight)) +
+    geom_edge_link(aes(width = weight), alpha = 0.2) + 
+    geom_node_point(aes(color = factor(group)), size = 1) +
+    geom_node_text(aes(label = name), size = 1.5, repel = TRUE) +
+    scale_color_brewer(palette = "Set1") +
+    theme_graph() +
+    labs(title = "A Song of Ice and Fire character network",
+         subtitle = "Nodes are colored by group")
+
+```
+
+---
+
+
+```{r, echo= FALSE, out.width="100%"}
+
+output_graphg
+
+```
+
+
+## See more...
+
+To see more analyses on this data set see the following (LINK)[https://www.shirin-glander.de/2018/03/got_network/].
+
+
+# Thanks for your attetion!
+
+Filippo Chiarello
+
